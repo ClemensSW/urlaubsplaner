@@ -1,9 +1,10 @@
-from PyQt6.QtWidgets import (QMainWindow, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout,
-                            QLabel, QStatusBar, QToolBar, QMessageBox, QFileDialog, 
-                            QPushButton, QLineEdit, QGroupBox, QFrame)
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                             QLabel, QPushButton, QComboBox, QStatusBar, QTabWidget,
+                             QFrame, QFileDialog, QMessageBox, QSplitter)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QFont
+from PyQt6.QtGui import QAction, QIcon, QFont
 from utils.excel_handler import ExcelHandler
+import sys
 
 class MainWindow(QMainWindow):
     def __init__(self, username, role, data_store):
@@ -12,305 +13,505 @@ class MainWindow(QMainWindow):
         self.role = role
         self.data_store = data_store
         
-        # Excel-Handler erstellen
+        # Create Excel handler
         self.excel_handler = ExcelHandler(self.data_store)
         
+        # Initialize UI
         self.init_ui()
+        self.apply_dark_theme()
         
     def init_ui(self):
-        # Fenstereigenschaften setzen
-        self.setWindowTitle("Urlaubsantrags-Verwaltung")
-        self.setMinimumSize(1024, 768)
+        """Initialize the main UI components"""
+        # Set window properties
+        self.setWindowTitle("Urlaubsübersicht")
+        self.setMinimumSize(1200, 800)
         
-        # Zentrales Widget und Hauptlayout erstellen
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        # Create central widget and main layout
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
         
-        # Willkommenslabel erstellen
-        welcome_label = QLabel(f"Willkommen, {self.username}! Rolle: {self.role}")
-        welcome_label.setFont(QFont("Arial", 12))
-        welcome_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(welcome_label)
+        # Set up the header
+        self.setup_header()
         
-        # Tab-Widget für verschiedene Bereiche erstellen
-        self.tab_widget = QTabWidget()
-        main_layout.addWidget(self.tab_widget)
+        # Set up the content tabs
+        self.setup_content_tabs()
         
-        # Tabs für verschiedene Module hinzufügen
-        self.setup_dashboard_tab()
-        self.setup_team_management_tab()
-        self.setup_vacation_overview_tab()
-        self.setup_import_tab()
-        
-        # Admin-Tabs nur für Admin-Benutzer anzeigen
-        if self.role == "admin":
-            self.setup_user_management_tab()
-        
-        # Statusleiste erstellen
+        # Set up status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage("Bereit")
+        self.status_bar.showMessage(f"Angemeldet als {self.username} | Rolle: {self.role}")
         
-        # Menüleiste erstellen
-        self.setup_menu_bar()
+        # Set up menu bar
+        self.setup_menu()
         
-        # Werkzeugleiste erstellen
-        self.setup_toolbar()
-    
-    def setup_dashboard_tab(self):
-        # Dashboard-Tab erstellen - dies wird die Hauptübersicht sein
-        dashboard_widget = QWidget()
-        dashboard_layout = QVBoxLayout(dashboard_widget)
+    def setup_header(self):
+        """Set up the application header"""
+        header = QFrame()
+        header.setObjectName("appHeader")
+        header.setFixedHeight(60)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(20, 0, 20, 0)
         
-        # Platzhalterinhalt
-        dashboard_label = QLabel("Dashboard - Hier kommt eine Übersicht der wichtigsten Informationen")
-        dashboard_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dashboard_layout.addWidget(dashboard_label)
+        # App title
+        app_title = QLabel("Urlaubsübersicht")
+        app_title.setObjectName("appTitle")
+        app_title.setFont(QFont("Segoe UI", 16, QFont.Weight.DemiBold))
         
-        self.tab_widget.addTab(dashboard_widget, "Dashboard")
-    
-    def setup_team_management_tab(self):
-        # Kolonnen-Verwaltungstab erstellen
-        team_widget = QWidget()
-        team_layout = QVBoxLayout(team_widget)
+        # User info
+        user_info = QLabel(f"{self.username}")
+        user_info.setObjectName("userInfo")
         
-        # Platzhalterinhalt
-        team_label = QLabel("Kolonnen-Verwaltung - Hier können Kolonnen erstellt und bearbeitet werden")
-        team_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        team_layout.addWidget(team_label)
+        # Add widgets to header
+        header_layout.addWidget(app_title)
+        header_layout.addStretch()
+        header_layout.addWidget(user_info)
         
-        self.tab_widget.addTab(team_widget, "Kolonnen-Verwaltung")
-    
-    def setup_vacation_overview_tab(self):
-        # Urlaubsübersichtstab erstellen
-        vacation_widget = QWidget()
-        vacation_layout = QVBoxLayout(vacation_widget)
+        # Add header to main layout
+        self.main_layout.addWidget(header)
         
-        # Platzhalterinhalt
-        vacation_label = QLabel("Urlaubsübersicht - Hier wird die Jahresplanung angezeigt")
-        vacation_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        vacation_layout.addWidget(vacation_label)
+        # Add a separator line
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setObjectName("headerSeparator")
+        self.main_layout.addWidget(separator)
         
-        self.tab_widget.addTab(vacation_widget, "Urlaubsübersicht")
-    
+    def setup_content_tabs(self):
+        """Set up the content area with tabs"""
+        self.tabs = QTabWidget()
+        self.tabs.setObjectName("contentTabs")
+        
+        # Create and add annual overview tab
+        self.setup_annual_overview_tab()
+        
+        # Create and add import tab
+        self.setup_import_tab()
+        
+        # Add tabs to main layout
+        self.main_layout.addWidget(self.tabs, 1)  # 1 = stretch factor
+        
+    def setup_annual_overview_tab(self):
+        """Set up the annual vacation overview tab"""
+        from ui.components.annual_vacation_overview import AnnualVacationOverview
+        
+        overview_tab = QWidget()
+        overview_layout = QVBoxLayout(overview_tab)
+        overview_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create annual overview component
+        self.annual_overview = AnnualVacationOverview(self.data_store)
+        overview_layout.addWidget(self.annual_overview)
+        
+        # Add to tabs
+        self.tabs.addTab(overview_tab, "Jahresübersicht")
+        
     def setup_import_tab(self):
-        # Import-Tab erstellen
-        import_widget = QWidget()
-        import_layout = QVBoxLayout(import_widget)
-        import_layout.setSpacing(10)
+        """Set up the import tab for Excel data"""
+        import_tab = QWidget()
+        import_layout = QVBoxLayout(import_tab)
+        import_layout.setContentsMargins(20, 20, 20, 20)
         
-        # Überschrift
-        title_label = QLabel("Datenimport aus Excel-Dateien")
-        title_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        import_layout.addWidget(title_label)
+        # Create header
+        import_header = QLabel("Daten importieren")
+        import_header.setObjectName("sectionHeader")
+        import_header.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
+        import_layout.addWidget(import_header)
         
-        # Trennlinie
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        import_layout.addWidget(line)
-        import_layout.addSpacing(10)
+        # Create import sections
+        self.create_user_import_section(import_layout)
+        import_layout.addSpacing(20)
+        self.create_vacation_import_section(import_layout)
         
-        # Bereich für Nutzerimport
-        user_import_group = QGroupBox("Nutzer importieren")
-        user_import_layout = QVBoxLayout(user_import_group)
-        
-        # Beschreibung
-        user_import_desc = QLabel(
-            "Importieren Sie Nutzerdaten aus einer Excel-Datei. "
-            "Die Datei sollte folgende Spalten enthalten:\n"
-            "ID, Aktion, Sprache, Login-E-Mail, Login-Mobilnummer, Vorname, Nachname, "
-            "Erstellungs-Datum, Öffentliche Telefonnummer, Abteilungsnummer, "
-            "Position/Stellenbeschreibung, Geburtstag, Eintrittsdatum, "
-            "Einladungs-Code, Onboarding-Status, App-Rolle"
-        )
-        user_import_desc.setWordWrap(True)
-        user_import_layout.addWidget(user_import_desc)
-        
-        # Dateiauswahl und Import-Button
-        file_layout = QHBoxLayout()
-        self.user_file_path = QLineEdit()
-        self.user_file_path.setReadOnly(True)
-        self.user_file_path.setPlaceholderText("Wählen Sie eine Excel-Datei aus...")
-        
-        browse_button = QPushButton("Durchsuchen...")
-        browse_button.clicked.connect(self.browse_user_file)
-        
-        import_button = QPushButton("Importieren")
-        import_button.clicked.connect(self.import_users)
-        
-        file_layout.addWidget(self.user_file_path, 3)
-        file_layout.addWidget(browse_button, 1)
-        file_layout.addWidget(import_button, 1)
-        
-        user_import_layout.addLayout(file_layout)
-        
-        # Status-Label für Importergebnisse
-        self.user_import_status = QLabel("")
-        self.user_import_status.setWordWrap(True)
-        user_import_layout.addWidget(self.user_import_status)
-        
-        import_layout.addWidget(user_import_group)
-        
-        # Bereich für Urlaubsanträge-Import
-        vacation_import_group = QGroupBox("Urlaubsanträge importieren")
-        vacation_import_layout = QVBoxLayout(vacation_import_group)
-        
-        # Beschreibung
-        vacation_import_desc = QLabel(
-            "Implementierung folgt in einem späteren Schritt."
-        )
-        vacation_import_desc.setWordWrap(True)
-        vacation_import_layout.addWidget(vacation_import_desc)
-        
-        import_layout.addWidget(vacation_import_group)
-        
-        # Abstandshalter am Ende
+        # Add spacer
         import_layout.addStretch()
         
-        self.tab_widget.addTab(import_widget, "Daten importieren")
+        # Add to tabs
+        self.tabs.addTab(import_tab, "Daten importieren")
+        
+        # Only show this tab for admin users
+        if self.role != "admin":
+            self.tabs.setTabVisible(1, False)
     
-    def setup_user_management_tab(self):
-        # Benutzerverwaltungstab erstellen (nur für Admins)
-        user_widget = QWidget()
-        user_layout = QVBoxLayout(user_widget)
+    def create_user_import_section(self, parent_layout):
+        """Create the user import section"""
+        # Create container
+        user_frame = QFrame()
+        user_frame.setObjectName("importSection")
+        user_layout = QVBoxLayout(user_frame)
         
-        # Platzhalterinhalt
-        user_label = QLabel("Benutzerverwaltung - Hier können Benutzer und Berechtigungen verwaltet werden")
-        user_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        user_layout.addWidget(user_label)
+        # Title
+        title = QLabel("Benutzer importieren")
+        title.setFont(QFont("Segoe UI", 12, QFont.Weight.DemiBold))
+        user_layout.addWidget(title)
         
-        self.tab_widget.addTab(user_widget, "Benutzerverwaltung")
+        # Description
+        desc = QLabel(
+            "Importieren Sie Nutzerdaten aus einer Excel-Datei. Die Datei sollte folgende Spalten enthalten:\n"
+            "ID, Aktion, Sprache, Login-E-Mail, Login-Mobilnummer, Vorname, Nachname, usw."
+        )
+        desc.setWordWrap(True)
+        user_layout.addWidget(desc)
+        
+        # File selection
+        file_layout = QHBoxLayout()
+        self.user_file_path = QLabel("Keine Datei ausgewählt")
+        
+        browse_btn = QPushButton("Datei auswählen...")
+        browse_btn.setObjectName("actionButton")
+        browse_btn.clicked.connect(self.browse_user_file)
+        
+        import_btn = QPushButton("Importieren")
+        import_btn.setObjectName("primaryButton")
+        import_btn.clicked.connect(self.import_users)
+        
+        file_layout.addWidget(self.user_file_path)
+        file_layout.addStretch()
+        file_layout.addWidget(browse_btn)
+        file_layout.addWidget(import_btn)
+        
+        user_layout.addLayout(file_layout)
+        
+        # Status label
+        self.user_import_status = QLabel("")
+        self.user_import_status.setWordWrap(True)
+        user_layout.addWidget(self.user_import_status)
+        
+        # Add to parent
+        parent_layout.addWidget(user_frame)
     
-    def setup_menu_bar(self):
-        # Menüleiste erstellen
-        menu_bar = self.menuBar()
+    def create_vacation_import_section(self, parent_layout):
+        """Create the vacation import section"""
+        # Create container
+        vacation_frame = QFrame()
+        vacation_frame.setObjectName("importSection")
+        vacation_layout = QVBoxLayout(vacation_frame)
         
-        # Datei-Menü
-        file_menu = menu_bar.addMenu("&Datei")
+        # Title
+        title = QLabel("Urlaubsdaten importieren")
+        title.setFont(QFont("Segoe UI", 12, QFont.Weight.DemiBold))
+        vacation_layout.addWidget(title)
         
-        # Aktionen zum Datei-Menü hinzufügen
-        import_action = QAction("Excel importieren...", self)
-        import_action.setStatusTip("Excel-Dateien aus der Mitarbeiter-App importieren")
-        import_action.triggered.connect(self.show_import_tab)
-        file_menu.addAction(import_action)
+        # Description
+        desc = QLabel(
+            "Importieren Sie Urlaubsanträge aus einer Excel-Datei. Die Datei sollte folgende Spalten enthalten:\n"
+            "Absender - User ID, Absender - Name, Absender - Einsendedatum, Bearbeiter - User ID, usw."
+        )
+        desc.setWordWrap(True)
+        vacation_layout.addWidget(desc)
+        
+        # File selection
+        file_layout = QHBoxLayout()
+        self.vacation_file_path = QLabel("Keine Datei ausgewählt")
+        
+        browse_btn = QPushButton("Datei auswählen...")
+        browse_btn.setObjectName("actionButton")
+        browse_btn.clicked.connect(self.browse_vacation_file)
+        
+        import_btn = QPushButton("Importieren")
+        import_btn.setObjectName("primaryButton")
+        import_btn.clicked.connect(self.import_vacation)
+        
+        file_layout.addWidget(self.vacation_file_path)
+        file_layout.addStretch()
+        file_layout.addWidget(browse_btn)
+        file_layout.addWidget(import_btn)
+        
+        vacation_layout.addLayout(file_layout)
+        
+        # Status label
+        self.vacation_import_status = QLabel("")
+        self.vacation_import_status.setWordWrap(True)
+        vacation_layout.addWidget(self.vacation_import_status)
+        
+        # Add to parent
+        parent_layout.addWidget(vacation_frame)
+    
+    def setup_menu(self):
+        """Set up the menu bar"""
+        menubar = self.menuBar()
+        
+        # File menu
+        file_menu = menubar.addMenu("&Datei")
+        
+        if self.role == "admin":
+            import_action = QAction("Daten importieren", self)
+            import_action.triggered.connect(lambda: self.tabs.setCurrentIndex(1))
+            file_menu.addAction(import_action)
+            
+            file_menu.addSeparator()
+        
+        export_action = QAction("Übersicht exportieren", self)
+        export_action.triggered.connect(self.export_overview)
+        file_menu.addAction(export_action)
         
         file_menu.addSeparator()
         
         exit_action = QAction("Beenden", self)
-        exit_action.setStatusTip("Anwendung beenden")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # Ansicht-Menü
-        view_menu = menu_bar.addMenu("&Ansicht")
+        # Teams menu
+        teams_menu = menubar.addMenu("&Kolonnen")
         
-        dashboard_action = QAction("Dashboard", self)
-        dashboard_action.setStatusTip("Dashboard anzeigen")
-        dashboard_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(0))
-        view_menu.addAction(dashboard_action)
+        manage_teams_action = QAction("Kolonnen verwalten", self)
+        manage_teams_action.triggered.connect(self.manage_teams)
+        teams_menu.addAction(manage_teams_action)
         
-        teams_action = QAction("Kolonnen-Verwaltung", self)
-        teams_action.setStatusTip("Kolonnen verwalten")
-        teams_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(1))
-        view_menu.addAction(teams_action)
+        assign_members_action = QAction("Mitarbeiter zuordnen", self)
+        assign_members_action.triggered.connect(self.assign_members)
+        teams_menu.addAction(assign_members_action)
         
-        vacation_action = QAction("Urlaubsübersicht", self)
-        vacation_action.setStatusTip("Urlaubsübersicht anzeigen")
-        vacation_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(2))
-        view_menu.addAction(vacation_action)
-        
-        # Admin-Menü (nur für Admin-Benutzer angezeigt)
+        # Admin menu (only for admin users)
         if self.role == "admin":
-            admin_menu = menu_bar.addMenu("&Administration")
+            admin_menu = menubar.addMenu("&Administration")
             
-            user_management_action = QAction("Benutzerverwaltung", self)
-            user_management_action.setStatusTip("Benutzer verwalten")
-            user_management_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(4))
-            admin_menu.addAction(user_management_action)
+            user_mgmt_action = QAction("Benutzerverwaltung", self)
+            user_mgmt_action.triggered.connect(self.manage_users)
+            admin_menu.addAction(user_mgmt_action)
+            
+            department_mgmt_action = QAction("Abteilungsverwaltung", self)
+            department_mgmt_action.triggered.connect(self.manage_departments)
+            admin_menu.addAction(department_mgmt_action)
         
-        # Hilfe-Menü
-        help_menu = menu_bar.addMenu("&Hilfe")
+        # Help menu
+        help_menu = menubar.addMenu("&Hilfe")
         
         about_action = QAction("Über", self)
-        about_action.setStatusTip("Informationen über die Anwendung")
-        about_action.triggered.connect(self.show_about_dialog)
+        about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
     
-    def setup_toolbar(self):
-        # Werkzeugleiste erstellen
-        toolbar = QToolBar("Hauptwerkzeugleiste")
-        toolbar.setMovable(False)
-        self.addToolBar(toolbar)
-        
-        # Aktionen zur Werkzeugleiste hinzufügen
-        dashboard_action = QAction("Dashboard", self)
-        dashboard_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(0))
-        toolbar.addAction(dashboard_action)
-        
-        teams_action = QAction("Kolonnen", self)
-        teams_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(1))
-        toolbar.addAction(teams_action)
-        
-        vacation_action = QAction("Urlaub", self)
-        vacation_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(2))
-        toolbar.addAction(vacation_action)
-        
-        import_action = QAction("Import", self)
-        import_action.triggered.connect(lambda: self.tab_widget.setCurrentIndex(3))
-        toolbar.addAction(import_action)
+    def apply_dark_theme(self):
+        """Apply dark theme to the application"""
+        self.setStyleSheet("""
+            QMainWindow, QWidget {
+                background-color: #2d2d2d;
+                color: #d4d4d4;
+            }
+            
+            QFrame#appHeader {
+                background-color: #1e5aa0;
+                color: white;
+            }
+            
+            QLabel#appTitle {
+                color: white;
+                font-weight: bold;
+            }
+            
+            QFrame#headerSeparator {
+                color: #3d3d3d;
+            }
+            
+            QTabWidget::pane {
+                border: none;
+                background-color: #2d2d2d;
+            }
+            
+            QTabWidget::tab-bar {
+                alignment: left;
+            }
+            
+            QTabBar::tab {
+                background-color: #383838;
+                color: #d4d4d4;
+                padding: 8px 16px;
+                margin-right: 2px;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+            }
+            
+            QTabBar::tab:selected {
+                background-color: #1e5aa0;
+                color: white;
+            }
+            
+            QTabBar::tab:!selected {
+                background-color: #3d3d3d;
+            }
+            
+            QTabBar::tab:!selected:hover {
+                background-color: #4a4a4a;
+            }
+            
+            QFrame#importSection {
+                background-color: #333333;
+                border-radius: 4px;
+                padding: 10px;
+            }
+            
+            QLabel#sectionHeader {
+                color: #e0e0e0;
+            }
+            
+            QPushButton {
+                background-color: #3d3d3d;
+                color: #d4d4d4;
+                border: none;
+                border-radius: 3px;
+                padding: 6px 12px;
+            }
+            
+            QPushButton:hover {
+                background-color: #4a4a4a;
+            }
+            
+            QPushButton:pressed {
+                background-color: #333333;
+            }
+            
+            QPushButton#primaryButton {
+                background-color: #1e5aa0;
+                color: white;
+                font-weight: bold;
+            }
+            
+            QPushButton#primaryButton:hover {
+                background-color: #2a6bc0;
+            }
+            
+            QPushButton#primaryButton:pressed {
+                background-color: #0d4a90;
+            }
+            
+            QPushButton#actionButton {
+                background-color: #505050;
+            }
+            
+            QComboBox {
+                background-color: #3d3d3d;
+                color: #d4d4d4;
+                border: 1px solid #505050;
+                border-radius: 3px;
+                padding: 4px 8px;
+            }
+            
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #505050;
+            }
+        """)
     
-    def show_import_tab(self):
-        # Zum Import-Tab wechseln
-        self.tab_widget.setCurrentIndex(3)
-    
-    def show_about_dialog(self):
-        # Über-Dialog anzeigen
-        QMessageBox.about(
-            self,
-            "Über Urlaubsantrags-Verwaltung",
-            "Urlaubsantrags-Verwaltung\n"
-            "Version 1.0\n\n"
-            "Eine Anwendung zur Verwaltung von Urlaubsanträgen und Kolonnenplanung."
-        )
-    
+    # Event handlers
     def browse_user_file(self):
-        """Öffnet einen Dateiauswahldialog für Excel-Dateien"""
+        """Browse for user Excel file"""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Excel-Datei mit Nutzern auswählen",
+            "Benutzer-Excel auswählen",
             "",
             "Excel-Dateien (*.xlsx *.xls);;Alle Dateien (*)"
         )
         
         if file_path:
             self.user_file_path.setText(file_path)
-            # Status zurücksetzen
             self.user_import_status.setText("")
     
     def import_users(self):
-        """Importiert Nutzer aus der ausgewählten Excel-Datei"""
+        """Import users from Excel file"""
         file_path = self.user_file_path.text()
         
-        if not file_path:
-            self.user_import_status.setText("Bitte wählen Sie eine Datei aus.")
+        if file_path == "Keine Datei ausgewählt":
+            self.user_import_status.setText("Bitte wählen Sie zuerst eine Datei aus.")
             return
         
-        # Importieren und Ergebnis anzeigen
+        # Import users using Excel handler
         success, message, count = self.excel_handler.import_users_from_excel(file_path)
         
         if success:
-            self.user_import_status.setText(f"✅ {message}")
+            self.user_import_status.setText(f"✓ {message}")
             self.status_bar.showMessage(f"{count} Benutzer erfolgreich importiert/aktualisiert", 5000)
         else:
-            self.user_import_status.setText(f"❌ {message}")
+            self.user_import_status.setText(f"✗ {message}")
             self.status_bar.showMessage("Fehler beim Importieren", 5000)
     
+    def browse_vacation_file(self):
+        """Browse for vacation Excel file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Urlaubs-Excel auswählen",
+            "",
+            "Excel-Dateien (*.xlsx *.xls);;Alle Dateien (*)"
+        )
+        
+        if file_path:
+            self.vacation_file_path.setText(file_path)
+            self.vacation_import_status.setText("")
+    
+    def import_vacation(self):
+        """Import vacation data from Excel file"""
+        file_path = self.vacation_file_path.text()
+        
+        if file_path == "Keine Datei ausgewählt":
+            self.vacation_import_status.setText("Bitte wählen Sie zuerst eine Datei aus.")
+            return
+        
+        # Import vacation data (would use real implementation)
+        self.vacation_import_status.setText("Diese Funktion ist noch nicht implementiert.")
+    
+    def export_overview(self):
+        """Export vacation overview to Excel"""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Übersicht exportieren",
+            "Jahresübersicht.xlsx",
+            "Excel-Dateien (*.xlsx);;Alle Dateien (*)"
+        )
+        
+        if file_path:
+            # Would implement Excel export functionality
+            QMessageBox.information(
+                self,
+                "Export",
+                "Die Übersicht wurde exportiert."
+            )
+    
+    def manage_teams(self):
+        """Open team management dialog"""
+        QMessageBox.information(
+            self,
+            "Kolonnen verwalten",
+            "Diese Funktion wird in einem späteren Update implementiert."
+        )
+    
+    def assign_members(self):
+        """Open member assignment dialog"""
+        QMessageBox.information(
+            self,
+            "Mitarbeiter zuordnen",
+            "Diese Funktion wird in einem späteren Update implementiert."
+        )
+    
+    def manage_users(self):
+        """Open user management dialog"""
+        QMessageBox.information(
+            self,
+            "Benutzerverwaltung",
+            "Diese Funktion wird in einem späteren Update implementiert."
+        )
+    
+    def manage_departments(self):
+        """Open department management dialog"""
+        QMessageBox.information(
+            self,
+            "Abteilungsverwaltung",
+            "Diese Funktion wird in einem späteren Update implementiert."
+        )
+    
+    def show_about(self):
+        """Show about dialog"""
+        QMessageBox.about(
+            self,
+            "Über Urlaubsübersicht",
+            "Urlaubsübersicht\nVersion 1.0\n\n"
+            "Eine Anwendung zur Visualisierung von Urlaubs- und Kolonnenplanung."
+        )
+    
     def closeEvent(self, event):
-        # Bestätigungsdialog vor dem Schließen anzeigen
+        """Handle window close event"""
         reply = QMessageBox.question(
             self,
             "Beenden bestätigen",

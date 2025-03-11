@@ -1,21 +1,28 @@
 import sys
 import os
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QFont
 from ui.login_window import LoginWindow
 
 def main():
-    # Anwendung initialisieren
+    # Initialize application
     app = QApplication(sys.argv)
-    app.setApplicationName("Urlaubsantrags-Verwaltung")
+    app.setApplicationName("Urlaubsplaner Pro")
     
-    # Sicherstellen, dass das data-Verzeichnis existiert
+    # Set default font
+    app.setFont(QFont("Segoe UI", 10))
+    
+    # Set application style
+    app.setStyle("Fusion")  # Use Fusion style as base for custom dark theme
+    
+    # Ensure data directory exists
     os.makedirs("data", exist_ok=True)
     
-    # Login-Fenster anzeigen
+    # Show login window
     login_window = LoginWindow()
     login_window.show()
     
-    # Anwendung starten
+    # Start application
     sys.exit(app.exec())
 
 if __name__ == "__main__":
