@@ -1,0 +1,24 @@
+# Virtuelle Umgebungen
+venv/
+.env/
+
+# Python Cache-Dateien
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode oder andere Editoren
+.vscode/
+.idea/
+
+# Betriebssystem-spezifische Dateien
+.DS_Store
+Thumbs.db
+
+# Logs und temporäre Dateien
+*.log
+*.tmp
+
+# Nutzerdaten
+data/*.json
